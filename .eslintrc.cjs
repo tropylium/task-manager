@@ -61,7 +61,6 @@ module.exports = {
       },
     ],
 
-    '@typescript-eslint/explicit-function-return-type': [ 'error', { allowExpressions: true } ],
     '@typescript-eslint/explicit-member-accessibility': 'error',
     '@typescript-eslint/no-inferrable-types': 'warn',
     '@typescript-eslint/no-for-in-array': 'error',
