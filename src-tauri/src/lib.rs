@@ -24,10 +24,9 @@ mod tests {
         fn run_db_test(&self, f: impl FnOnce() + panic::UnwindSafe) {
             // delete any database files if exists
             _ = fs::remove_file(TEST_PATH);
-            println!("before");
             f();
+            // cleanup
             _ = fs::remove_file(TEST_PATH);
-            println!("after");
         }
     }
 
@@ -60,16 +59,41 @@ mod tests {
     fn db_add_new_tag() {
         run_db_test(|| {
             let mut db = Db::new(TEST_PATH).unwrap();
-            let test_data = TagData {
+            let data1 = TagData {
                 name: String::from("new_tag"),
-                color: Color::default(),
+                color: HslColor {
+                    hue: 50,
+                    saturation: 89,
+                    lightness: 73,
+                },
                 active: true,
             };
-            assert!(db.add_new_tag(&test_data).is_ok_and(|tag| tag == 0));
-            assert_eq!(db.all_tags().unwrap(), vec![Tag {
-                id: 0,
-                data: test_data,
-            }])
+            let data2 = TagData {
+                name: String::from("whee!"),
+                color: HslColor {
+                    hue: 360,
+                    saturation: 100,
+                    lightness: 0,
+                },
+                active: false,
+            };
+            // note: sqlite first id is 1, not 0
+            assert!(db.add_new_tag(&data1).is_ok_and(|tag| tag == 1));
+            assert!(db.add_new_tag(&data2).is_ok_and(|tag| tag == 2));
+            let mut all_tags = db.all_tags().unwrap();
+
+            // sort just in case order isn't consistent
+            all_tags.sort_by_key(|tag| tag.id);
+            assert_eq!(db.all_tags().unwrap(), vec![
+                Tag {
+                    id: 1,
+                    data: data1,
+                },
+                Tag {
+                    id: 2,
+                    data: data2,
+                }
+            ]);
         });
     }
 }
