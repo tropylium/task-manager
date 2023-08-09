@@ -11,9 +11,32 @@ mod tests {
     use std::panic;
     use std::sync::Mutex;
     use std::fs;
+    use crate::DbError::TagDoesNotExistError;
     use super::*;
 
     const TEST_PATH: &str = "test-outputs/test-db.sqlite";
+    fn tag_data_1() -> TagData {
+        TagData {
+            name: String::from("new_tag"),
+            color: HslColor {
+                hue: 50,
+                saturation: 89,
+                lightness: 73,
+            },
+            active: true,
+        }
+    }
+    fn tag_data_2() -> TagData {
+        TagData {
+            name: String::from("whee!"),
+            color: HslColor {
+                hue: 360,
+                saturation: 100,
+                lightness: 0,
+            },
+            active: false,
+        }
+    }
 
     // see
     // https://users.rust-lang.org/t/passing-test-threads-1-to-cargo-test-by-default/87225/4
@@ -59,27 +82,9 @@ mod tests {
     fn db_add_new_tag() {
         run_db_test(|| {
             let mut db = Db::new(TEST_PATH).unwrap();
-            let data1 = TagData {
-                name: String::from("new_tag"),
-                color: HslColor {
-                    hue: 50,
-                    saturation: 89,
-                    lightness: 73,
-                },
-                active: true,
-            };
-            let data2 = TagData {
-                name: String::from("whee!"),
-                color: HslColor {
-                    hue: 360,
-                    saturation: 100,
-                    lightness: 0,
-                },
-                active: false,
-            };
             // note: sqlite first id is 1, not 0
-            assert!(db.add_new_tag(&data1).is_ok_and(|tag| tag == 1));
-            assert!(db.add_new_tag(&data2).is_ok_and(|tag| tag == 2));
+            assert!(db.add_new_tag(&tag_data_1()).is_ok_and(|tag| tag == 1));
+            assert!(db.add_new_tag(&tag_data_2()).is_ok_and(|tag| tag == 2));
             let mut all_tags = db.all_tags().unwrap();
 
             // sort just in case order isn't consistent
@@ -87,13 +92,36 @@ mod tests {
             assert_eq!(db.all_tags().unwrap(), vec![
                 Tag {
                     id: 1,
-                    data: data1,
+                    data: tag_data_1(),
                 },
                 Tag {
                     id: 2,
-                    data: data2,
+                    data: tag_data_2(),
                 }
             ]);
+        });
+    }
+
+    #[test]
+    fn db_get_by_id_success() {
+        run_db_test(|| {
+            let mut db = Db::new(TEST_PATH).unwrap();
+            db.add_new_tag(&tag_data_1()).unwrap();
+            let id2 = db.add_new_tag(&tag_data_2()).unwrap();
+            assert_eq!(db.tag_by_id(id2).unwrap(), Tag {
+                id: id2,
+                data: tag_data_2()
+            });
+        });
+    }
+
+    #[test]
+    fn db_get_by_id_failure() {
+        run_db_test(|| {
+            let mut db = Db::new(TEST_PATH).unwrap();
+            db.add_new_tag(&tag_data_1()).unwrap();
+            db.add_new_tag(&tag_data_2()).unwrap();
+            assert_eq!(db.tag_by_id(0), Err(TagDoesNotExistError { id: 0 }));
         });
     }
 }
