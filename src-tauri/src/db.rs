@@ -1,20 +1,21 @@
-use std::path::PathBuf;
-use rusqlite::{Connection, OpenFlags, Params, Row};
+use std::path::Path;
+use rusqlite::{Connection, Params, Row};
 use crate::{Tag, TagData, TagId};
 use crate::db::DbError::RusqliteError;
 
+#[derive(Debug)]
 pub enum DbError<'a> {
     RusqliteError { error: rusqlite::Error },
     TagDoesNotExistError { tag: &'a Tag },
 }
 
-impl DbError {
+impl<'a> DbError<'a> {
     pub fn error_message(&self) -> String {
         todo!()
     }
 }
 
-impl From<rusqlite::Error> for DbError {
+impl<'a> From<rusqlite::Error> for DbError<'a> {
     fn from(value: rusqlite::Error) -> Self {
         RusqliteError { error: value }
     }
@@ -27,21 +28,21 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn new(database_file: &PathBuf) -> Self {
-        Self {
-            conn: Connection::open_with_flags(database_file, OpenFlags::SQLITE_OPEN_READ_WRITE).unwrap()
-        }
+    pub fn new<'a, P: AsRef<Path>>(database_file: P) -> DbResult<'a, Self> {
+        Ok(Self {
+            conn: Connection::open(database_file)?
+        })
     }
 
     pub fn all_tags(&self) -> DbResult<Vec<Tag>> {
         todo!()
     }
 
-    pub fn add_new_tag(&mut self, data: TagData) -> DbResult<TagId> {
+    pub fn add_new_tag(&mut self, data: &TagData) -> DbResult<TagId> {
         todo!()
     }
 
-    pub fn modify_tag(&mut self, tag: Tag) -> DbResult<()> {
+    pub fn modify_tag(&mut self, tag: &Tag) -> DbResult<()> {
         todo!()
     }
 
