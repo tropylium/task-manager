@@ -1,9 +1,7 @@
 use std::path::Path;
-use rusqlite::{Connection, Error, Row};
+use rusqlite::{Connection, Row};
 use rusqlite::Error::QueryReturnedNoRows;
 use crate::{Tag, TagData, TagId};
-use crate::db::DbError::RusqliteError;
-use crate::DbError::TagDoesNotExistError;
 
 #[derive(Debug, PartialEq)]
 pub enum DbError {
@@ -19,7 +17,7 @@ impl DbError {
 
 impl<'a> From<rusqlite::Error> for DbError {
     fn from(value: rusqlite::Error) -> Self {
-        RusqliteError { error: value }
+        DbError::RusqliteError { error: value }
     }
 }
 
@@ -78,7 +76,7 @@ impl Db {
         ))?;
         stmt.query_row((id,), Db::tag_from_row ).map_err(|err| -> DbError {
             match err {
-                QueryReturnedNoRows => TagDoesNotExistError {id},
+                QueryReturnedNoRows => DbError::TagDoesNotExistError {id},
                 other => DbError::from(other),
             }
         })
@@ -87,7 +85,20 @@ impl Db {
     /// Modifies an existing tag in the database. Returns `TagDoesNotExistError` if
     /// the tag id being modified doesn't exist in the database.
     pub fn modify_tag(&mut self, tag: &Tag) -> DbResult<()> {
-        todo!()
+        let tx = self.conn.transaction()?;
+        let rows = tx.execute(&format!(r#"
+                UPDATE {} SET
+                    name = ?2,
+                    color = ?3,
+                    active = ?4
+                WHERE id = ?1;
+            "#, { Db::TAG_TABLE }), (tag.id, &tag.data.name, &tag.data.color, tag.data.active))?;
+        tx.commit()?;
+        match rows {
+            0 => Err(DbError::TagDoesNotExistError { id: tag.id }),
+            1 => Ok(()),
+            other => panic!("Modify tag changed {} rows!", other),
+        }
     }
 
     /// Delete a tag by its id in the database.

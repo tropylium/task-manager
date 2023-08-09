@@ -56,7 +56,7 @@ mod tests {
     static TESTER: Mutex<DbExecutor> = Mutex::new(DbExecutor);
     fn run_db_test(f: impl FnOnce() + panic::UnwindSafe) {
         // there is nothing to poison if a test fails; we want to run the rest anyway
-        let executor = match TESTER.lock() {
+        match TESTER.lock() {
             Ok(guard) => guard,
             Err(poison) => poison.into_inner()
         }.run_db_test(f);
@@ -124,4 +124,33 @@ mod tests {
             assert_eq!(db.tag_by_id(0), Err(TagDoesNotExistError { id: 0 }));
         });
     }
+
+    #[test]
+    fn db_modify_tag_success() {
+        run_db_test(|| {
+            let mut db = Db::new(TEST_PATH).unwrap();
+            let id1 = db.add_new_tag(&tag_data_1()).unwrap();
+            let new_tag = Tag {
+                id: id1,
+                data: tag_data_2()
+            };
+            db.modify_tag(&new_tag).unwrap();
+            assert_eq!(db.tag_by_id(id1).unwrap(), new_tag);
+        });
+    }
+
+    #[test]
+    fn db_modify_tag_failure() {
+        run_db_test(|| {
+            let mut db = Db::new(TEST_PATH).unwrap();
+            db.add_new_tag(&tag_data_1()).unwrap();
+            db.add_new_tag(&tag_data_2()).unwrap();
+            let new_tag = Tag {
+                id: 0,
+                data: tag_data_2()
+            };
+            assert_eq!(db.modify_tag(&new_tag), Err(TagDoesNotExistError { id: 0 }));
+        });
+    }
+
 }
