@@ -9,12 +9,6 @@ pub enum DbError {
     TagDoesNotExistError { id: TagId },
 }
 
-impl DbError {
-    pub fn error_message(&self) -> String {
-        todo!()
-    }
-}
-
 impl<'a> From<rusqlite::Error> for DbError {
     fn from(value: rusqlite::Error) -> Self {
         DbError::RusqliteError { error: value }
