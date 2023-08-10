@@ -9,15 +9,14 @@ use serde::de::{Error, Visitor};
 // purely to serialize to i64 for both sql and json
 /// A timestamp based on unix epoch, with resolution of seconds.
 /// Serializes the same as `i64`.
-pub struct MyDateTime {
-    pub time: DateTime<Utc>,
-}
+#[derive(Debug, PartialEq)]
+pub struct MyDateTime(DateTime<Utc>);
 
 impl From<i64> for MyDateTime {
     fn from(value: i64) -> Self {
-        MyDateTime {
-            time: Utc.timestamp_opt(value, 0).unwrap()
-        }
+        MyDateTime (
+            Utc.timestamp_opt(value, 0).unwrap()
+        )
     }
 }
 
@@ -30,13 +29,13 @@ impl FromSql for MyDateTime {
 
 impl ToSql for MyDateTime {
     fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
-        Ok(ToSqlOutput::from(self.time.timestamp()))
+        Ok(ToSqlOutput::from(self.0.timestamp()))
     }
 }
 
 impl Serialize for MyDateTime {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_i64(self.time.timestamp())
+        serializer.serialize_i64(self.0.timestamp())
     }
 }
 

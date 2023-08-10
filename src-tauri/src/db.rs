@@ -1,7 +1,7 @@
 use std::path::Path;
 use rusqlite::{Connection, Row};
 use rusqlite::Error::QueryReturnedNoRows;
-use crate::{Tag, TagData, TagId};
+use crate::{EditableTaskData, Tag, TagData, TagId, Task, TaskId};
 
 #[derive(Debug, PartialEq)]
 pub enum DbError {
@@ -41,7 +41,7 @@ impl Db {
         })
     }
 
-    /// Returns all tags stored in this database in some order.
+    /// Retrieves all tags stored in this database in some order.
     pub fn all_tags(&self) -> DbResult<Vec<Tag>> {
         let mut stmt = self.conn.prepare(
             &format!("SELECT * FROM {}", Db::TAG_TABLE)
@@ -96,7 +96,8 @@ impl Db {
     }
 
     /// Delete a tag by its id in the database. Returns `TagDoesNotExistError` if
-    /// the tag id being delted doesn't exist in the database.
+    /// the tag id being deleted doesn't exist in the database.
+    /// Otherwise, also removes the tag being deleted from any tasks that have this tag..
     pub fn delete_tag(&mut self, id: TagId) -> DbResult<()> {
         let tx = self.conn.transaction()?;
         let rows = tx.execute(&format!(
@@ -108,6 +109,15 @@ impl Db {
             1 => Ok(()),
             other => panic!("Delete tag changed {} rows!", other),
         }
+    }
+
+    /// Retrieves all tasks stored in this database in some order.
+    pub fn all_tasks(&self) -> DbResult<Vec<Task>> {
+        todo!()
+    }
+
+    pub fn add_new_task(&mut self, data: &EditableTaskData) -> DbResult<TaskId> {
+        todo!()
     }
 
     fn tag_from_row(row: &Row) -> rusqlite::Result<Tag> {
