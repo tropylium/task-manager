@@ -101,9 +101,19 @@ impl Db {
         }
     }
 
-    /// Delete a tag by its id in the database.
+    /// Delete a tag by its id in the database. Returns `TagDoesNotExistError` if
+    /// the tag id being delted doesn't exist in the database.
     pub fn delete_tag(&mut self, id: TagId) -> DbResult<()> {
-        todo!()
+        let tx = self.conn.transaction()?;
+        let rows = tx.execute(&format!(
+            "DELETE FROM {} WHERE id = ?1", {Db::TAG_TABLE}
+        ), (id,))?;
+        tx.commit()?;
+        match rows {
+            0 => Err(DbError::TagDoesNotExistError {id}),
+            1 => Ok(()),
+            other => panic!("Delete tag changed {} rows!", other),
+        }
     }
 
     fn tag_from_row(row: &Row) -> rusqlite::Result<Tag> {

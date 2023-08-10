@@ -7,14 +7,59 @@ pub use task::{*};
 pub use db::{*};
 
 #[cfg(test)]
-mod tests {
+mod test_utils {
     use std::panic;
     use std::sync::Mutex;
     use std::fs;
-    use crate::DbError::TagDoesNotExistError;
-    use super::*;
 
-    const TEST_PATH: &str = "test-outputs/test-db.sqlite";
+    pub const TEST_PATH: &str = "test-outputs/test-db.sqlite";
+    // We want to run each test synchronously because they modify the same file,
+    // and we want to guarantee consistent starting/ ending conditions for each test.
+    // Reference:
+    // https://users.rust-lang.org/t/passing-test-threads-1-to-cargo-test-by-default/87225/4
+    // https://stackoverflow.com/questions/58006033/how-to-run-setup-code-before-any-tests-run-in-rust
+    #[derive(Copy, Clone)]
+    struct DbExecutor;
+    impl DbExecutor {
+        fn run_db_test(&self, f: impl FnOnce() + panic::UnwindSafe) {
+            // delete any database files if exists
+            _ = fs::remove_file(TEST_PATH);
+            f();
+            // cleanup
+            _ = fs::remove_file(TEST_PATH);
+        }
+    }
+
+    static TESTER: Mutex<DbExecutor> = Mutex::new(DbExecutor);
+    pub fn run_db_test(f: impl FnOnce() + panic::UnwindSafe) {
+        // there is nothing to poison if a test fails; we want to run the rest anyway
+        match TESTER.lock() {
+            Ok(guard) => guard,
+            Err(poison) => poison.into_inner()
+        }.run_db_test(f);
+    }
+}
+
+#[cfg(test)]
+mod db_overall_tests {
+    use super::*;
+    use test_utils::{TEST_PATH, run_db_test};
+
+    #[test]
+    fn create_database() {
+        run_db_test(|| {
+            let db_result = Db::new(TEST_PATH);
+            assert!(db_result.is_ok())
+        });
+    }
+}
+
+#[cfg(test)]
+mod db_tag_tests {
+    use super::*;
+    use crate::DbError::TagDoesNotExistError;
+    use test_utils::{TEST_PATH, run_db_test};
+
     fn tag_data_1() -> TagData {
         TagData {
             name: String::from("new_tag"),
@@ -38,43 +83,11 @@ mod tests {
         }
     }
 
-    // see
-    // https://users.rust-lang.org/t/passing-test-threads-1-to-cargo-test-by-default/87225/4
-    // https://stackoverflow.com/questions/58006033/how-to-run-setup-code-before-any-tests-run-in-rust
-    #[derive(Copy, Clone)]
-    struct DbExecutor;
-    impl DbExecutor {
-        fn run_db_test(&self, f: impl FnOnce() + panic::UnwindSafe) {
-            // delete any database files if exists
-            _ = fs::remove_file(TEST_PATH);
-            f();
-            // cleanup
-            _ = fs::remove_file(TEST_PATH);
-        }
-    }
-
-    static TESTER: Mutex<DbExecutor> = Mutex::new(DbExecutor);
-    fn run_db_test(f: impl FnOnce() + panic::UnwindSafe) {
-        // there is nothing to poison if a test fails; we want to run the rest anyway
-        match TESTER.lock() {
-            Ok(guard) => guard,
-            Err(poison) => poison.into_inner()
-        }.run_db_test(f);
-    }
-
-    #[test]
-    fn create_database() {
-        run_db_test(|| {
-            let db_result = Db::new(TEST_PATH);
-            assert!(db_result.is_ok())
-        });
-    }
-
     #[test]
     fn db_empty() {
         run_db_test(|| {
             let db = Db::new(TEST_PATH).unwrap();
-            assert_eq!(db.all_tags().unwrap(), vec![]);
+            assert_eq!(db.all_tags().expect("Get all tags should not fail"), vec![]);
         });
     }
 
@@ -108,7 +121,7 @@ mod tests {
             let mut db = Db::new(TEST_PATH).unwrap();
             db.add_new_tag(&tag_data_1()).unwrap();
             let id2 = db.add_new_tag(&tag_data_2()).unwrap();
-            assert_eq!(db.tag_by_id(id2).unwrap(), Tag {
+            assert_eq!(db.tag_by_id(id2).expect("Tag by id should not fail"), Tag {
                 id: id2,
                 data: tag_data_2()
             });
@@ -134,7 +147,7 @@ mod tests {
                 id: id1,
                 data: tag_data_2()
             };
-            db.modify_tag(&new_tag).unwrap();
+            db.modify_tag(&new_tag).expect("Modify tag should not fail");
             assert_eq!(db.tag_by_id(id1).unwrap(), new_tag);
         });
     }
@@ -153,4 +166,25 @@ mod tests {
         });
     }
 
+    #[test]
+    fn db_delete_tag_success() {
+        run_db_test(|| {
+            let mut db = Db::new(TEST_PATH).unwrap();
+            let id1 = db.add_new_tag(&tag_data_1()).unwrap();
+            let id2 = db.add_new_tag(&tag_data_2()).unwrap();
+            db.delete_tag(id1).expect("Delete tag should not fail");
+            assert_eq!(db.all_tags().unwrap(), vec![Tag {
+                id: id2,
+                data: tag_data_2(),
+            }]);
+        });
+    }
+
+    #[test]
+    fn db_delete_tag_failure() {
+        run_db_test(|| {
+            let mut db = Db::new(TEST_PATH).unwrap();
+            assert_eq!(db.delete_tag(0), Err(TagDoesNotExistError { id: 0 }));
+        });
+    }
 }
