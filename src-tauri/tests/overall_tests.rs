@@ -4,8 +4,7 @@ use util::*;
 
 #[test]
 fn create_database() {
-    run_db_test(|| {
-        let db_result = Db::new(TEST_PATH);
-        assert!(db_result.is_ok())
+    run_db_test(|_| {
+        // Nothing, `run_db_test` creates a database and unwraps
     });
 }

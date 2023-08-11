@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::fs;
 use chrono::{TimeZone, Utc};
 use once_cell::sync::Lazy;
-use app::{EditableTagData, EditableTaskData, HslColor, MyDateTime};
+use app::{Db, EditableTagData, EditableTaskData, HslColor, MyDateTime};
 
 pub const TEST_PATH: &str = "test-outputs/test-db.sqlite";
 // We want to run each test synchronously because they modify the same file,
@@ -14,17 +14,18 @@ pub const TEST_PATH: &str = "test-outputs/test-db.sqlite";
 #[derive(Copy, Clone)]
 struct DbExecutor;
 impl DbExecutor {
-    fn run_db_test(&self, f: impl FnOnce() + panic::UnwindSafe) {
+    fn run_db_test(&self, f: impl FnOnce(Db) + panic::UnwindSafe) {
         // delete any database files if exists
         _ = fs::remove_file(TEST_PATH);
-        f();
+        let db = Db::new(TEST_PATH).unwrap();
+        f(db);
         // cleanup
         _ = fs::remove_file(TEST_PATH);
     }
 }
 
 static TESTER: Mutex<DbExecutor> = Mutex::new(DbExecutor);
-pub fn run_db_test(f: impl FnOnce() + panic::UnwindSafe) {
+pub fn run_db_test(f: impl FnOnce(Db) + panic::UnwindSafe) {
     // there is nothing to poison if a test fails; we want to run the rest anyway
     match TESTER.lock() {
         Ok(guard) => guard,
