@@ -1,11 +1,11 @@
 use chrono::Utc;
 use app::*;
-use crate::DbError::TagDoesNotExistError;
+use DbError::TagDoesNotExistError;
 mod util;
 use util::*;
 
 #[test]
-fn db_empty() {
+fn db_tag_empty() {
     run_db_test(|| {
         let db = Db::new(TEST_PATH).unwrap();
         assert_eq!(db.all_tags().expect("Get all tags should not fail"), vec![]);
