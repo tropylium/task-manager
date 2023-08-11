@@ -40,7 +40,7 @@ pub struct EditableTaskData {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 /// Fields of a `Task` determined by the database when a new task is created.
-pub struct CreatedTaskData {
+pub struct GeneratedTaskData {
     pub id: TaskId,
     pub create_time: MyDateTime,
     pub last_edit_time: MyDateTime,
