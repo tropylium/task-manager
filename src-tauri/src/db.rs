@@ -2,7 +2,7 @@ use std::path::Path;
 use chrono::Utc;
 use rusqlite::{Connection, Row};
 use rusqlite::Error::QueryReturnedNoRows;
-use crate::{EditableTaskData, Tag, EditableTagData, GeneratedTagData, TagId, Task, TaskId, GeneratedTaskData, FinishedTaskData};
+use crate::{EditableTaskData, Tag, EditableTagData, GeneratedTagData, TagId, Task, TaskId, GeneratedTaskData, FinishedTaskData, ModifiedTaskData};
 use crate::my_date_time::MyDateTime;
 
 #[derive(Debug, PartialEq)]
@@ -157,11 +157,11 @@ impl Db {
         todo!()
     }
 
-    /// Modifies an existing task in the database.
+    /// Modifies an existing task in the database, updating the last edit time to now.
     ///
     /// # Failure
     /// Returns `DbError::TaskDoesNotExistError` if the task being modified doesn't exist in the database.
-    pub fn modify_task(&mut self, id: TaskId, data: EditableTaskData) -> DbResult<()> {
+    pub fn modify_task(&mut self, id: TaskId, data: &EditableTaskData) -> DbResult<ModifiedTaskData> {
         todo!()
     }
 

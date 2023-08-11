@@ -21,7 +21,22 @@ pub struct Task {
 }
 
 impl Task {
-    fn is_done(&self) -> bool {
+    pub fn from_parts(editable: &EditableTaskData, generated: &GeneratedTaskData) -> Self {
+        Self {
+            id: generated.id,
+            title: editable.title.clone(),
+            tag: editable.tag,
+            body: editable.body.clone(),
+            difficulty: editable.difficulty,
+            create_time: MyDateTime::from(generated.create_time.clone()),
+            last_edit_time: MyDateTime::from(generated.last_edit_time.clone()),
+            due_time: editable.due_time.as_ref().map(|time| time.clone()),
+            target_time: editable.target_time.as_ref().map(|time| time.clone()),
+            done_time: generated.done_time.as_ref().map(|time| time.clone()),
+            paused: false,
+        }
+    }
+    pub fn is_done(&self) -> bool {
         self.done_time.is_some()
     }
 }

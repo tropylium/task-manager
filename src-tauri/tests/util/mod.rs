@@ -1,8 +1,9 @@
 use std::panic;
 use std::sync::Mutex;
 use std::fs;
+use chrono::{TimeZone, Utc};
 use once_cell::sync::Lazy;
-use app::{EditableTagData, HslColor};
+use app::{EditableTagData, EditableTaskData, HslColor, MyDateTime};
 
 pub const TEST_PATH: &str = "test-outputs/test-db.sqlite";
 // We want to run each test synchronously because they modify the same file,
@@ -53,4 +54,32 @@ static SAMPLE_TAGS: Lazy<Vec<EditableTagData>> = Lazy::new(|| vec![
 ]);
 pub fn sample_tag_data() -> &'static [EditableTagData] {
     &SAMPLE_TAGS
+}
+
+static SAMPLE_TASKS: Lazy<Vec<EditableTaskData>> = Lazy::new(|| vec![
+    EditableTaskData {
+        title: String::from("Blueberries"),
+        tag: Some(1),
+        body: String::from("A type of berry"),
+        difficulty: 3,
+        due_time: Some(MyDateTime::from(
+            Utc.with_ymd_and_hms(2023, 9, 1, 0,0,0).unwrap()
+        )),
+        target_time: Some(MyDateTime::from(
+            Utc.with_ymd_and_hms(2023, 8, 1, 0,0,0).unwrap()
+        )),
+        paused: false,
+    },
+    EditableTaskData {
+        title: String::from("Apples"),
+        tag: None,
+        body: String::from("Not a berry"),
+        difficulty: 0,
+        due_time: None,
+        target_time: None,
+        paused: false,
+    },
+]);
+pub fn sample_task_data() -> &'static [EditableTaskData] {
+    &SAMPLE_TASKS
 }

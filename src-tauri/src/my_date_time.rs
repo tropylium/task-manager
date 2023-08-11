@@ -1,5 +1,4 @@
 use std::fmt::Formatter;
-use std::ops::Deref;
 use chrono::{DateTime, TimeZone, Utc};
 use rusqlite::ToSql;
 use rusqlite::types::{FromSql, FromSqlResult, ToSqlOutput, ValueRef};
@@ -8,16 +7,8 @@ use serde::de::{Error, Visitor};
 
 /// A wrapper around a chrono datetime, restricted to a second for resolution.
 /// Serializes to an integer being the number of seconds from the last unix epoch.
-#[derive(Debug, PartialEq)]
-pub struct MyDateTime(DateTime<Utc>);
-
-impl Deref for MyDateTime {
-    type Target = DateTime<Utc>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+#[derive(Debug, PartialEq, Clone)]
+pub struct MyDateTime(pub DateTime<Utc>);
 
 impl From<i64> for MyDateTime {
     fn from(value: i64) -> Self {

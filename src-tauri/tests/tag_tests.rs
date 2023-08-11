@@ -13,7 +13,7 @@ fn db_tag_empty() {
 }
 
 #[test]
-fn db_add_new_tag() {
+fn db_tag_add_new() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
 
@@ -22,12 +22,12 @@ fn db_add_new_tag() {
         // note: sqlite first id is 1, not 0
         assert_eq!(result0.id, 1);
         // generated timestamp is within 1 second of now
-        assert!(result0.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result0.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
         let result1 = db.add_new_tag(&sample_tag_data()[1])
             .expect("Adding tag should not fail");
         assert_eq!(result1.id, 2);
-        assert!(result1.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result1.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
         let mut all_tags = db.all_tags().unwrap();
         // sort just in case order isn't consistent
@@ -41,7 +41,7 @@ fn db_add_new_tag() {
 }
 
 #[test]
-fn db_get_by_id_success() {
+fn db_tag_get_by_id_success() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
         db.add_new_tag(&sample_tag_data()[0]).unwrap();
@@ -53,7 +53,7 @@ fn db_get_by_id_success() {
 }
 
 #[test]
-fn db_get_by_id_failure() {
+fn db_tag_get_by_id_failure() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
         db.add_new_tag(&sample_tag_data()[0]).unwrap();
