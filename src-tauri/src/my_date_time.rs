@@ -1,22 +1,36 @@
 use std::fmt::Formatter;
+use std::ops::Deref;
 use chrono::{DateTime, TimeZone, Utc};
 use rusqlite::ToSql;
 use rusqlite::types::{FromSql, FromSqlResult, ToSqlOutput, ValueRef};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{Error, Visitor};
 
-// a simple wrapper around a chrono datetime,
-// purely to serialize to i64 for both sql and json
-/// A timestamp based on unix epoch, with resolution of seconds.
-/// Serializes the same as `i64`.
+/// A wrapper around a chrono datetime, restricted to a second for resolution.
+/// Serializes to an integer being the number of seconds from the last unix epoch.
 #[derive(Debug, PartialEq)]
 pub struct MyDateTime(DateTime<Utc>);
+
+impl Deref for MyDateTime {
+    type Target = DateTime<Utc>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl From<i64> for MyDateTime {
     fn from(value: i64) -> Self {
         MyDateTime (
             Utc.timestamp_opt(value, 0).unwrap()
         )
+    }
+}
+
+impl From<DateTime<Utc>> for MyDateTime {
+    /// Note: may result in precision loss.
+    fn from(value: DateTime<Utc>) -> Self {
+        MyDateTime::from(value.timestamp())
     }
 }
 

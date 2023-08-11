@@ -1,30 +1,8 @@
+use chrono::Utc;
 use app::*;
 use crate::DbError::TagDoesNotExistError;
 mod util;
 use util::*;
-
-fn tag_data_1() -> TagData {
-    TagData {
-        name: String::from("new_tag"),
-        color: HslColor {
-            hue: 50,
-            saturation: 89,
-            lightness: 73,
-        },
-        active: true,
-    }
-}
-fn tag_data_2() -> TagData {
-    TagData {
-        name: String::from("whee!"),
-        color: HslColor {
-            hue: 360,
-            saturation: 100,
-            lightness: 0,
-        },
-        active: false,
-    }
-}
 
 #[test]
 fn db_empty() {
@@ -38,22 +16,26 @@ fn db_empty() {
 fn db_add_new_tag() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
-        // note: sqlite first id is 1, not 0
-        assert!(db.add_new_tag(&tag_data_1()).is_ok_and(|tag| tag == 1));
-        assert!(db.add_new_tag(&tag_data_2()).is_ok_and(|tag| tag == 2));
-        let mut all_tags = db.all_tags().unwrap();
 
+        let result0 = db.add_new_tag(&sample_tag_data()[0])
+            .expect("Adding tag should not fail");
+        // note: sqlite first id is 1, not 0
+        assert_eq!(result0.id, 1);
+        // generated timestamp is within 1 second of now
+        assert!(result0.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+
+        let result1 = db.add_new_tag(&sample_tag_data()[1])
+            .expect("Adding tag should not fail");
+        assert_eq!(result1.id, 2);
+        assert!(result1.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+
+        let mut all_tags = db.all_tags().unwrap();
         // sort just in case order isn't consistent
         all_tags.sort_by_key(|tag| tag.id);
+
         assert_eq!(db.all_tags().unwrap(), vec![
-            Tag {
-                id: 1,
-                data: tag_data_1(),
-            },
-            Tag {
-                id: 2,
-                data: tag_data_2(),
-            }
+            Tag::from_parts(&sample_tag_data()[0], &result0),
+            Tag::from_parts(&sample_tag_data()[1], &result1),
         ]);
     });
 }
@@ -62,12 +44,11 @@ fn db_add_new_tag() {
 fn db_get_by_id_success() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
-        db.add_new_tag(&tag_data_1()).unwrap();
-        let id2 = db.add_new_tag(&tag_data_2()).unwrap();
-        assert_eq!(db.tag_by_id(id2).expect("Tag by id should not fail"), Tag {
-            id: id2,
-            data: tag_data_2()
-        });
+        db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let result1 = db.add_new_tag(&sample_tag_data()[1]).unwrap();
+        assert_eq!(db.tag_by_id(result1.id).expect("Tag by id should not fail"),
+                   Tag::from_parts(&sample_tag_data()[1], &result1),
+        );
     });
 }
 
@@ -75,8 +56,8 @@ fn db_get_by_id_success() {
 fn db_get_by_id_failure() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
-        db.add_new_tag(&tag_data_1()).unwrap();
-        db.add_new_tag(&tag_data_2()).unwrap();
+        db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        db.add_new_tag(&sample_tag_data()[1]).unwrap();
         assert_eq!(db.tag_by_id(0), Err(TagDoesNotExistError { id: 0 }));
     });
 }
@@ -85,13 +66,12 @@ fn db_get_by_id_failure() {
 fn db_modify_tag_success() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
-        let id1 = db.add_new_tag(&tag_data_1()).unwrap();
-        let new_tag = Tag {
-            id: id1,
-            data: tag_data_2()
-        };
-        db.modify_tag(&new_tag).expect("Modify tag should not fail");
-        assert_eq!(db.tag_by_id(id1).unwrap(), new_tag);
+        let result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        db.modify_tag(result0.id, &sample_tag_data()[1])
+            .expect("Modify tag should not fail");
+        assert_eq!(db.tag_by_id(result0.id).unwrap(),
+            Tag::from_parts(&sample_tag_data()[1], &result0)
+        );
     });
 }
 
@@ -99,13 +79,10 @@ fn db_modify_tag_success() {
 fn db_modify_tag_failure() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
-        db.add_new_tag(&tag_data_1()).unwrap();
-        db.add_new_tag(&tag_data_2()).unwrap();
-        let new_tag = Tag {
-            id: 0,
-            data: tag_data_2()
-        };
-        assert_eq!(db.modify_tag(&new_tag), Err(TagDoesNotExistError { id: 0 }));
+        db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        db.add_new_tag(&sample_tag_data()[1]).unwrap();
+        assert_eq!(db.modify_tag(0, &sample_tag_data()[1]),
+                   Err(TagDoesNotExistError { id: 0 }));
     });
 }
 
@@ -113,13 +90,12 @@ fn db_modify_tag_failure() {
 fn db_delete_tag_success() {
     run_db_test(|| {
         let mut db = Db::new(TEST_PATH).unwrap();
-        let id1 = db.add_new_tag(&tag_data_1()).unwrap();
-        let id2 = db.add_new_tag(&tag_data_2()).unwrap();
-        db.delete_tag(id1).expect("Delete tag should not fail");
-        assert_eq!(db.all_tags().unwrap(), vec![Tag {
-            id: id2,
-            data: tag_data_2(),
-        }]);
+        let result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let result1 = db.add_new_tag(&sample_tag_data()[1]).unwrap();
+        db.delete_tag(result0.id).expect("Delete tag should not fail");
+        assert_eq!(db.all_tags().unwrap(), vec![
+            Tag::from_parts(&sample_tag_data()[1], &result1)
+        ]);
     });
 }
 
