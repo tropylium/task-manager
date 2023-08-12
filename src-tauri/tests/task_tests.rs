@@ -1,5 +1,3 @@
-#[allow(dead_code, unused_mut)]
-
 use chrono::Utc;
 use app::*;
 use DbError::{TaskDoesNotExistError, TaskStatusError};
@@ -8,7 +6,7 @@ use util::*;
 
 #[test]
 fn db_task_empty() {
-    run_db_test(|mut db| {
+    run_db_test(|db| {
         assert_eq!(db.all_tasks().expect("Get all tasks should not fail"), vec![]);
     });
 }
@@ -284,7 +282,7 @@ fn db_task_finish_success() {
         let finish_time = finish_data.done_time.as_ref().expect("Finish data should be some,");
         assert!(finish_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
-        let mut new_task = Task::from_parts(&sample_task_data()[0], &result0);
+        let mut new_task = Task::from_parts(&task_data0, &result0);
         new_task.done_time = finish_data.done_time;
         assert_eq!(db.task_by_id(result0.id).unwrap().unwrap(),
             new_task
@@ -301,8 +299,7 @@ fn db_task_finish_failure() {
         let result0 = db.add_new_task(&task_data0).unwrap();
 
         db.finish_task(result0.id).unwrap();
-        db.finish_task(result0.id).unwrap();
-        assert_eq!(db.unfinish_task(result0.id),
+        assert_eq!(db.finish_task(result0.id),
                    Err(TaskStatusError { id: result0.id, actual_status: true })
         )
     });

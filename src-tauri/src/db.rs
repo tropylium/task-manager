@@ -274,7 +274,20 @@ impl Db {
     /// # Failure
     /// Returns `DbError::TaskDoesNotExistError` if the task being deleted doesn't exist in the database.
     pub fn delete_task(&mut self, id: TaskId) -> DbResult<()> {
-        todo!()
+        let tx = self.conn.transaction()?;
+        let rows = tx.execute(&format!(
+            "DELETE FROM {} WHERE id = ?1;", Db::TASK_TABLE
+        ), (id,))?;
+        if rows == 0 {
+            return Err(DbError::TaskDoesNotExistError { id });
+        } else if rows > 1 {
+            panic!("Delete task changed {} rows!", rows);
+        }
+        tx.execute(&format!(
+            "DELETE FROM {} WHERE task_id = ?1;", Db::TAG_TASK_TABLE
+        ), (id,))?;
+        tx.commit()?;
+        Ok(())
     }
 
     /// Mark a task as done, updating the done time of this task. Returns the new done time.
@@ -283,7 +296,22 @@ impl Db {
     /// Returns `DbError::TaskDoesNotExistError` if the task doesn't exist in the database.
     /// Returns `DbError::TaskStatusError` if the task is already finished.
     pub fn finish_task(&mut self, id: TaskId) -> DbResult<FinishedTaskData> {
-        todo!()
+        let task = match self.task_by_id(id)? {
+            Some(task) => task,
+            None => return Err(DbError::TaskDoesNotExistError {id}),
+        };
+        if task.done_time.is_some() {
+            return Err(DbError::TaskStatusError { id, actual_status: true });
+        }
+        let done_time = Some(MyDateTime::from(Utc::now()));
+        let tx = self.conn.transaction()?;
+        tx.execute(&format!(
+            "UPDATE {} SET done_time = ?2 WHERE id = ?1;", Db::TASK_TABLE
+        ), (id, &done_time))?;
+        tx.commit()?;
+        Ok(FinishedTaskData {
+            done_time,
+        })
     }
 
     /// Mark a task as not done, updating the done time of this task. Returns the new done time.
@@ -292,7 +320,22 @@ impl Db {
     /// Returns `DbError::TaskDoesNotExistError` if the task doesn't exist in the database.
     /// Returns `DbError::TaskStatusError` if the task is already not finished.
     pub fn unfinish_task(&mut self, id: TaskId) -> DbResult<FinishedTaskData> {
-        todo!()
+        let task = match self.task_by_id(id)? {
+            Some(task) => task,
+            None => return Err(DbError::TaskDoesNotExistError {id}),
+        };
+        if task.done_time.is_none() {
+            return Err(DbError::TaskStatusError { id, actual_status: false });
+        }
+        let done_time = None;
+        let tx = self.conn.transaction()?;
+        tx.execute(&format!(
+            "UPDATE {} SET done_time = ?2 WHERE id = ?1;", Db::TASK_TABLE
+        ), (id, &done_time))?;
+        tx.commit()?;
+        Ok(FinishedTaskData {
+            done_time,
+        })
     }
 
     fn tag_from_row(row: &Row) -> rusqlite::Result<Tag> {

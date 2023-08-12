@@ -7,8 +7,7 @@ use util::*;
 
 #[test]
 fn db_tag_empty() {
-    run_db_test(|mut db| {
-        let db = Db::new(TEST_PATH).unwrap();
+    run_db_test(|db| {
         assert_eq!(db.all_tags().expect("Get all tags should not fail"), vec![]);
     });
 }

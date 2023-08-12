@@ -1,6 +1,3 @@
-#[allow(dead_code, unused_mut)]
-
-use app::*;
 mod util;
 use util::*;
 
