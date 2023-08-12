@@ -248,11 +248,19 @@ fn db_modify_task_failure_no_tag() {
 #[test]
 fn db_delete_task_success() {
     run_db_test(|mut db| {
-        let result0 = db.add_new_task(&sample_task_data()[0]).unwrap();
-        let result1 = db.add_new_task(&sample_task_data()[1]).unwrap();
+        let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        let result0 = db.add_new_task(&task_data0).unwrap();
+
+        let tag_result1 = db.add_new_tag(&sample_tag_data()[1]).unwrap();
+        let mut task_data1 = sample_task_data()[1].clone();
+        task_data1.tag = Some(tag_result1.id);
+        let result1 = db.add_new_task(&task_data1).unwrap();
         db.delete_task(result0.id).expect("Delete task should not fail");
+
         assert_eq!(db.all_tasks().unwrap(), vec![
-            Task::from_parts(&sample_task_data()[1], &result1)
+            Task::from_parts(&task_data1, &result1)
         ]);
     });
 }
@@ -267,10 +275,15 @@ fn db_delete_task_failure() {
 #[test]
 fn db_task_finish_success() {
     run_db_test(|mut db| {
-        let result0 = db.add_new_task(&sample_task_data()[0]).unwrap();
+        let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        let result0 = db.add_new_task(&task_data0).unwrap();
+
         let finish_data = db.finish_task(result0.id).expect("finish task should not fail");
         let finish_time = finish_data.done_time.as_ref().expect("Finish data should be some,");
         assert!(finish_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+
         let mut new_task = Task::from_parts(&sample_task_data()[0], &result0);
         new_task.done_time = finish_data.done_time;
         assert_eq!(db.task_by_id(result0.id).unwrap().unwrap(),
@@ -282,7 +295,11 @@ fn db_task_finish_success() {
 #[test]
 fn db_task_finish_failure() {
     run_db_test(|mut db| {
-        let result0 = db.add_new_task(&sample_task_data()[0]).unwrap();
+        let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        let result0 = db.add_new_task(&task_data0).unwrap();
+
         db.finish_task(result0.id).unwrap();
         db.finish_task(result0.id).unwrap();
         assert_eq!(db.unfinish_task(result0.id),
@@ -294,7 +311,11 @@ fn db_task_finish_failure() {
 #[test]
 fn db_task_unfinish_success() {
     run_db_test(|mut db| {
-        let result0 = db.add_new_task(&sample_task_data()[0]).unwrap();
+        let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        let result0 = db.add_new_task(&task_data0).unwrap();
+
         db.finish_task(result0.id).unwrap();
         let finish_data = db.unfinish_task(result0.id).expect("Unfinish task should not fail");
         assert!(finish_data.done_time.is_none());
@@ -310,7 +331,11 @@ fn db_task_unfinish_success() {
 #[test]
 fn db_task_unfinish_failure() {
     run_db_test(|mut db| {
-        let result0 = db.add_new_task(&sample_task_data()[0]).unwrap();
+        let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        let result0 = db.add_new_task(&task_data0).unwrap();
+
         assert_eq!(db.unfinish_task(result0.id),
             Err(TaskStatusError { id: result0.id, actual_status: false })
         )
