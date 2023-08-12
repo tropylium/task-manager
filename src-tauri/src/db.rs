@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path};
 use chrono::Utc;
 use rusqlite::{Connection, Row};
 use crate::{EditableTaskData, Tag, EditableTagData, GeneratedTagData, TagId, Task, TaskId, GeneratedTaskData, FinishedTaskData, ModifiedTaskData};
@@ -73,14 +73,30 @@ impl Db {
         })
     }
 
+    // // note: see https://users.rust-lang.org/t/closure-accepting-an-iterator-as-a-parameter/77905/4
+    // /// Exposes an iterator over all tags in this database, in order of insertion.
+    // /// Accepts a function which you can use to do whatever with the iterator,
+    // /// since the iterator can't be directly returned.
+    // pub fn tags_iterator<R>(&self, iterator_op: impl FnOnce(&mut dyn Iterator<Item = Tag>) -> R) -> DbResult<R> {
+    //     let mut stmt = self.conn.prepare(
+    //         &format!("SELECT * FROM {}", Db::TAG_TABLE)
+    //     ).unwrap();
+    //     let mut iter = stmt
+    //         .query_map([], Db::tag_from_row)?
+    //         .map(|tag_result| tag_result.unwrap());
+    //     Ok(iterator_op(&mut iter))
+    // }
+
     /// Convenience method to retrieve all tags stored in this database
     /// in order of insertion.
     pub fn all_tags(&self) -> DbResult<Vec<Tag>> {
         let mut stmt = self.conn.prepare(
             &format!("SELECT * FROM {}", Db::TAG_TABLE)
         ).unwrap();
-        let iter = stmt.query_map([], Db::tag_from_row)?;
-        Ok(iter.map(|value| value.unwrap()).collect())
+        let iter = stmt
+            .query_map([], Db::tag_from_row)?
+            .map(|tag_result| tag_result.unwrap());
+        Ok(iter.collect())
     }
 
     /// Add a new tag to the database, initializing:
@@ -158,6 +174,20 @@ impl Db {
 
         tx.commit()?;
         Ok(())
+    }
+
+    /// Applies a filter function to the tags in this database, returning
+    /// the tags that pass it.
+    pub fn filter_tags<P>(&self, predicate: P) -> DbResult<Vec<Tag>>
+        where P: Fn(&Tag) -> bool {
+        let mut stmt = self.conn.prepare(
+            &format!("SELECT * FROM {}", Db::TAG_TABLE)
+        ).unwrap();
+        let iter = stmt
+            .query_map([], Db::tag_from_row)?
+            .map(|tag_result| tag_result.unwrap())
+            .filter(predicate);
+        Ok(iter.collect())
     }
 
     /// Convenience method to retrieves all tasks stored in this database
@@ -338,6 +368,20 @@ impl Db {
         Ok(FinishedTaskData {
             done_time,
         })
+    }
+
+    /// Applies a filter function to the tasks in this database, returning
+    /// the tasks that pass it.
+    pub fn filter_tasks<P>(&self, predicate: P) -> DbResult<Vec<Task>>
+        where P: Fn(&Task) -> bool {
+        let mut stmt = self.conn.prepare(
+            &format!("SELECT * FROM {}", Db::TASK_TABLE)
+        ).unwrap();
+        let iter = stmt
+            .query_map([], |row| self.task_from_row(row))?
+            .map(|tag_result| tag_result.unwrap())
+            .filter(predicate);
+        Ok(iter.collect())
     }
 
     fn tag_from_row(row: &Row) -> rusqlite::Result<Tag> {

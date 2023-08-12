@@ -334,3 +334,32 @@ fn db_task_unfinish_failure() {
         )
     });
 }
+
+#[test]
+fn db_filter_tasks() {
+    run_db_test(|mut db| {
+        let tag_data0 = sample_tag_data()[0].clone();
+        let tag_result0 = db.add_new_tag(&tag_data0).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        
+        let tag_data1 = sample_tag_data()[1].clone();
+        let tag_result1 = db.add_new_tag(&tag_data1).unwrap();
+        let mut task_data1 = sample_task_data()[1].clone();
+        task_data1.tag = Some(tag_result1.id);
+
+        db.add_new_task(&task_data0).unwrap();
+        db.add_new_task(&task_data1).unwrap();
+        
+        // filter always true
+        let filter_result = db.filter_tasks(|_| true)
+            .expect("Filter tags should not fail");
+        assert_eq!(filter_result, db.all_tasks().unwrap());
+
+        // filter always false
+        let filter_result = db.filter_tasks(|_| false)
+            .expect("Filter tags should not fail");
+        assert_eq!(filter_result, vec![]);
+    });
+}
+

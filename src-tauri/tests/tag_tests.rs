@@ -110,3 +110,23 @@ fn db_delete_tag_failure() {
         assert_eq!(db.delete_tag(0), Err(TagDoesNotExistError { id: 0 }));
     });
 }
+
+#[test]
+fn db_filter_tags() {
+    run_db_test(|mut db| {
+        let tag_data0 = sample_tag_data()[0].clone();
+        db.add_new_tag(&tag_data0).unwrap();
+        let tag_data1 = sample_tag_data()[1].clone();
+        db.add_new_tag(&tag_data1).unwrap();
+
+        // filter always true
+        let filter_result = db.filter_tags(|_| true)
+            .expect("Filter tags should not fail");
+        assert_eq!(filter_result, db.all_tags().unwrap());
+
+        // filter always false
+        let filter_result = db.filter_tags(|_| false)
+            .expect("Filter tags should not fail");
+        assert_eq!(filter_result, vec![]);
+    });
+}
