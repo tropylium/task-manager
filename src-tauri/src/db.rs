@@ -1,7 +1,6 @@
 use std::path::Path;
 use chrono::Utc;
 use rusqlite::{Connection, Row};
-use rusqlite::Error::QueryReturnedNoRows;
 use crate::{EditableTaskData, Tag, EditableTagData, GeneratedTagData, TagId, Task, TaskId, GeneratedTaskData, FinishedTaskData, ModifiedTaskData};
 use crate::my_date_time::MyDateTime;
 
@@ -33,6 +32,8 @@ pub struct Db {
 
 impl Db {
     const TAG_TABLE: &'static str = "tags";
+    const TASK_TABLE: &'static str = "tasks";
+    const TAG_TASK_TABLE: &'static str = "tags_tasks";
 
     /// Creates a database instance from either an empty/ nonexistent file or an existing database.
     pub fn new<P: AsRef<Path>>(database_file: P) -> DbResult<Self> {
@@ -45,7 +46,28 @@ impl Db {
                 "active" INTEGER NOT NULL,
                 "create_time" INTEGER NOT NULL
             );
-        "#, {Db::TAG_TABLE}), ())?;
+        "#, Db::TAG_TABLE), ()).unwrap();
+        connection.execute(&format!(r#"
+            create table if not exists {} (
+                "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                "title" TEXT NOT NULL,
+                "body" TEXT NOT NULL,
+                "difficulty" INTEGER NOT NULL,
+                "create_time" INTEGER NOT NULL,
+                "last_edit_time" INTEGER NOT NULL,
+                "due_time" INTEGER,
+                "target_time" INTEGER,
+                "done_time" INTEGER,
+                "paused" INTEGER
+            );
+        "#, Db::TASK_TABLE), ()).unwrap();
+        connection.execute(&format!(r#"
+            create table if not exists {} (
+                "task_id" INTEGER NOT NULL,
+                "tag_id" INTEGER NOT NULL,
+                PRIMARY KEY (task_id, tag_id)
+            );
+        "#, Db::TAG_TASK_TABLE), ()).unwrap();
         Ok(Self {
             conn: connection
         })
@@ -56,7 +78,7 @@ impl Db {
         let mut stmt = self.conn.prepare(
             &format!("SELECT * FROM {}", Db::TAG_TABLE)
         ).unwrap();
-        let iter = stmt.query_map([], Db::tag_from_row).unwrap();
+        let iter = stmt.query_map([], Db::tag_from_row)?;
         Ok(iter.map(|value| value.unwrap()).collect())
     }
 
@@ -69,7 +91,7 @@ impl Db {
         let now = MyDateTime::from(Utc::now());
         let tx = self.conn.transaction()?;
         tx.execute(&format!(
-            "INSERT INTO {} (name, color, active, create_time) values (?1, ?2, ?3, ?4)", Db::TAG_TABLE
+            "INSERT INTO {} (name, color, active, create_time) values (?1, ?2, ?3, ?4);", Db::TAG_TABLE
         ), (&data.name, &data.color, data.active, &now))?;
         let new_id = tx.last_insert_rowid();
         tx.commit()?;
@@ -79,20 +101,18 @@ impl Db {
         })
     }
 
-    /// Retrieve the tag with this id.
-    ///
-    /// # Failure
-    /// Returns `DbError::TagDoesNotExistError` if the tag doesn't exist in the database.
-    pub fn tag_by_id(&self, id: TagId) -> DbResult<Tag> {
+    /// Retrieve the tag with this id, or `None` if this tag doesn't exist in the database.
+    pub fn tag_by_id(&self, id: TagId) -> DbResult<Option<Tag>> {
         let mut stmt = self.conn.prepare(&format!(
             "SELECT * FROM {} WHERE id = ?1", Db::TAG_TABLE
-        ))?;
-        stmt.query_row((id,), Db::tag_from_row ).map_err(|err| -> DbError {
-            match err {
-                QueryReturnedNoRows => DbError::TagDoesNotExistError {id},
-                other => DbError::from(other),
+        )).unwrap();
+        match stmt.query_row((id,), Db::tag_from_row ) {
+            Ok(tag) => Ok(Some(tag)),
+            Err(e) => match e {
+                rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                other => Err(DbError::from(other)),
             }
-        })
+        }
     }
 
     /// Modifies an existing tag in the database.
@@ -107,7 +127,7 @@ impl Db {
                     color = ?3,
                     active = ?4
                 WHERE id = ?1;
-            "#, { Db::TAG_TABLE }), (id, &modify.name, &modify.color, modify.active))?;
+            "#, Db::TAG_TABLE), (id, &modify.name, &modify.color, modify.active))?;
         tx.commit()?;
         match rows {
             0 => Err(DbError::TagDoesNotExistError { id }),
@@ -135,7 +155,11 @@ impl Db {
 
     /// Retrieves all tasks stored in this database in some order.
     pub fn all_tasks(&self) -> DbResult<Vec<Task>> {
-        todo!()
+        let mut stmt = self.conn.prepare(
+            &format!("SELECT * FROM {}", Db::TASK_TABLE)
+        ).unwrap();
+        let iter = stmt.query_map([], |row| self.task_from_row(row))?;
+        Ok(iter.map(|task| task.unwrap()).collect())
     }
 
     /// Add a new tag to the database, initializing:
@@ -146,23 +170,97 @@ impl Db {
     ///
     /// Returns the fields generated for this task.
     pub fn add_new_task(&mut self, data: &EditableTaskData) -> DbResult<GeneratedTaskData> {
-        todo!()
+        if let Some(tag_id) = data.tag {
+            if self.tag_by_id(tag_id).unwrap().is_none() {
+                return Err(DbError::TagDoesNotExistError {id: tag_id});
+            }
+        }
+
+        let now = MyDateTime::from(Utc::now());
+        let tx = self.conn.transaction()?;
+        tx.execute(&format!(r#"
+            INSERT INTO {}
+            (title, body, difficulty, create_time, last_edit_time, due_time, target_time, paused) values
+            (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);
+        "#, Db::TASK_TABLE), (&data.title, &data.body, data.difficulty, &now, &now, &data.due_time, &data.target_time, data.paused))?;
+        let new_id = tx.last_insert_rowid();
+        if let Some(tag) = data.tag {
+            tx.execute(&format!(
+                "INSERT INTO {} (task_id, tag_id) values (?1, ?2);", Db::TAG_TASK_TABLE
+            ), (new_id, tag))?;
+        }
+        tx.commit()?;
+        Ok(GeneratedTaskData {
+            id: new_id,
+            create_time: MyDateTime::from(now.0.clone()),
+            last_edit_time: now,
+            done_time: None,
+        })
     }
 
-    /// Retrieve the task with this id.
-    ///
-    /// # Failure
-    /// Returns `DbError::TaskDoesNotExistError` if the task doesn't exist in the database.
-    pub fn task_by_id(&self, id: TaskId) -> DbResult<Task> {
-        todo!()
+    /// Retrieve the task with this id, or `None` if the task doesn't exist in the database.
+    pub fn task_by_id(&self, id: TaskId) -> DbResult<Option<Task>> {
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT * FROM {} WHERE id = ?1", {Db::TASK_TABLE}
+        )).unwrap();
+        match stmt.query_row((id,), |row| self.task_from_row(row)) {
+            Ok(task) => Ok(Some(task)),
+            Err(e) => match e {
+                rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                other => Err(DbError::from(other))
+            }
+        }
     }
 
     /// Modifies an existing task in the database, updating the last edit time to now.
     ///
     /// # Failure
     /// Returns `DbError::TaskDoesNotExistError` if the task being modified doesn't exist in the database.
+    /// Returns `DbError::TagDoesNotExistError` if attempted to add a tag that doesn't exist.
     pub fn modify_task(&mut self, id: TaskId, data: &EditableTaskData) -> DbResult<ModifiedTaskData> {
-        todo!()
+        if let Some(tag_id) = data.tag {
+            if self.tag_by_id(tag_id).unwrap().is_none() {
+                return Err(DbError::TagDoesNotExistError {id: tag_id});
+            }
+        }
+
+        let now = MyDateTime::from(Utc::now());
+        let tx = self.conn.transaction()?;
+        let rows = tx.execute(&format!(r#"
+                UPDATE {} SET
+                    title = ?2,
+                    body = ?3,
+                    difficulty = ?4,
+                    last_edit_time = ?5,
+                    due_time = ?6,
+                    target_time = ?7,
+                    paused = ?8
+                WHERE id = ?1;
+        "#, Db::TASK_TABLE),
+      (id, &data.title, &data.body, data.difficulty, &now, &data.due_time, &data.target_time, data.paused))?;
+
+        if rows == 0 {
+            return Err(DbError::TaskDoesNotExistError { id });
+        } else if rows > 1 {
+            panic!("Modify task changed {} rows!", rows);
+        }
+
+        tx.execute(&format!(
+            "DELETE FROM {} WHERE task_id = ?1", Db::TAG_TASK_TABLE
+        ), (id,))?;
+
+        if let Some(tag_id) = data.tag {
+            tx.execute(&format!(r#"
+                    INSERT INTO {} (task_id, tag_id) values (?1, ?2)
+                    ON CONFLICT (task_id, tag_id) DO NOTHING;
+                "#, Db::TAG_TASK_TABLE
+            ), (id, tag_id))?;
+        }
+        tx.commit()?;
+
+        Ok(ModifiedTaskData {
+            last_edit_time: now,
+        })
     }
 
     /// Delete a task by its id in the database.
@@ -200,4 +298,32 @@ impl Db {
             create_time: row.get("create_time")?,
         })
     }
+
+    fn get_task_tag(&self, id: TaskId) -> Option<TagId> {
+        let mut stmt = self.conn.prepare(
+            &format!("SELECT tag_id FROM {} WHERE task_id = ?1", {Db::TAG_TASK_TABLE})
+        ).unwrap();
+        let tag_id_result: rusqlite::Result<TagId> = stmt.query_row(
+            [id], |result| Ok(result.get("tag_id")?)
+        );
+        tag_id_result.ok()
+    }
+
+    fn task_from_row(&self, row: &Row) -> rusqlite::Result<Task> {
+        let id = row.get("id")?;
+        Ok(Task {
+            id,
+            title: row.get("title")?,
+            tag: self.get_task_tag(id),
+            body: row.get("body")?,
+            difficulty: row.get("difficulty")?,
+            create_time: row.get("create_time")?,
+            last_edit_time: row.get("last_edit_time")?,
+            due_time: row.get("due_time")?,
+            target_time: row.get("target_time")?,
+            done_time: row.get("done_time")?,
+            paused: row.get("paused")?,
+        })
+    }
+
 }

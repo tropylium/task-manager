@@ -44,7 +44,7 @@ fn db_tag_get_by_id_success() {
         db.add_new_tag(&sample_tag_data()[0]).unwrap();
         let result1 = db.add_new_tag(&sample_tag_data()[1]).unwrap();
         assert_eq!(db.tag_by_id(result1.id).expect("Tag by id should not fail"),
-                   Tag::from_parts(&sample_tag_data()[1], &result1),
+                   Some(Tag::from_parts(&sample_tag_data()[1], &result1)),
         );
     });
 }
@@ -54,7 +54,7 @@ fn db_tag_get_by_id_failure() {
     run_db_test(|mut db| {
         db.add_new_tag(&sample_tag_data()[0]).unwrap();
         db.add_new_tag(&sample_tag_data()[1]).unwrap();
-        assert_eq!(db.tag_by_id(0), Err(TagDoesNotExistError { id: 0 }));
+        assert_eq!(db.tag_by_id(0), Ok(None));
     });
 }
 
@@ -64,7 +64,7 @@ fn db_modify_tag_success() {
         let result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
         db.modify_tag(result0.id, &sample_tag_data()[1])
             .expect("Modify tag should not fail");
-        assert_eq!(db.tag_by_id(result0.id).unwrap(),
+        assert_eq!(db.tag_by_id(result0.id).unwrap().unwrap(),
             Tag::from_parts(&sample_tag_data()[1], &result0)
         );
     });
