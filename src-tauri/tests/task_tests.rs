@@ -37,10 +37,6 @@ fn db_task_add_new_success() {
         assert!(result1.last_edit_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
         assert!(result1.done_time.is_none());
 
-        let mut all_tasks = db.all_tasks().unwrap();
-        // sort just in case order isn't consistent
-        all_tasks.sort_by_key(|task| task.id);
-
         assert_eq!(db.all_tasks().unwrap(), vec![
             Task::from_parts(&task_data0, &result0),
             Task::from_parts(&task_data1, &result1),

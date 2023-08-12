@@ -73,7 +73,8 @@ impl Db {
         })
     }
 
-    /// Retrieves all tags stored in this database in some order.
+    /// Convenience method to retrieve all tags stored in this database
+    /// in order of insertion.
     pub fn all_tags(&self) -> DbResult<Vec<Tag>> {
         let mut stmt = self.conn.prepare(
             &format!("SELECT * FROM {}", Db::TAG_TABLE)
@@ -159,7 +160,8 @@ impl Db {
         Ok(())
     }
 
-    /// Retrieves all tasks stored in this database in some order.
+    /// Convenience method to retrieves all tasks stored in this database
+    /// in order of insertion.
     pub fn all_tasks(&self) -> DbResult<Vec<Task>> {
         let mut stmt = self.conn.prepare(
             &format!("SELECT * FROM {}", Db::TASK_TABLE)

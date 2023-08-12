@@ -27,10 +27,6 @@ fn db_tag_add_new() {
         assert_eq!(result1.id, 2);
         assert!(result1.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
-        let mut all_tags = db.all_tags().unwrap();
-        // sort just in case order isn't consistent
-        all_tags.sort_by_key(|tag| tag.id);
-
         assert_eq!(db.all_tags().unwrap(), vec![
             Tag::from_parts(&sample_tag_data()[0], &result0),
             Tag::from_parts(&sample_tag_data()[1], &result1),
