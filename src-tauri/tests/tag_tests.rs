@@ -1,3 +1,4 @@
+#[allow(dead_code, unused_mut)]
 use chrono::Utc;
 use app::*;
 use DbError::TagDoesNotExistError;
@@ -88,6 +89,22 @@ fn db_delete_tag_success() {
         db.delete_tag(result0.id).expect("Delete tag should not fail");
         assert_eq!(db.all_tags().unwrap(), vec![
             Tag::from_parts(&sample_tag_data()[1], &result1)
+        ]);
+    });
+}
+
+#[test]
+fn db_delete_tag_success_remove_from_task() {
+    run_db_test(|mut db| {
+        let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
+        let mut task_data0 = sample_task_data()[0].clone();
+        task_data0.tag = Some(tag_result0.id);
+        let task_data = db.add_new_task(&task_data0).unwrap();
+
+        db.delete_tag(tag_result0.id).expect("Delete tag should not fail");
+        task_data0.tag = None;
+        assert_eq!(db.all_tasks().unwrap(), vec![
+            Task::from_parts(&task_data0, &task_data)
         ]);
     });
 }

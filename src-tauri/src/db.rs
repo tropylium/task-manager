@@ -145,12 +145,18 @@ impl Db {
         let rows = tx.execute(&format!(
             "DELETE FROM {} WHERE id = ?1", {Db::TAG_TABLE}
         ), (id,))?;
-        tx.commit()?;
-        match rows {
-            0 => Err(DbError::TagDoesNotExistError {id}),
-            1 => Ok(()),
-            other => panic!("Delete tag changed {} rows!", other),
+        if rows == 0 {
+            return Err(DbError::TagDoesNotExistError { id });
+        } else if rows > 1 {
+            panic!("Delete tag changed {} rows!", rows);
         }
+        tx.execute(&format!(
+            "DELETE FROM {} WHERE tag_id = ?1",
+            Db::TAG_TASK_TABLE
+        ), (id,))?;
+
+        tx.commit()?;
+        Ok(())
     }
 
     /// Retrieves all tasks stored in this database in some order.

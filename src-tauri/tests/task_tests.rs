@@ -1,3 +1,5 @@
+#[allow(dead_code, unused_mut)]
+
 use chrono::Utc;
 use app::*;
 use DbError::{TaskDoesNotExistError, TaskStatusError};
