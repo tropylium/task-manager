@@ -7,7 +7,7 @@ use serde::de::{Error, Visitor};
 
 /// A wrapper around a chrono datetime, restricted to a second for resolution.
 /// Serializes to an integer being the number of seconds from the last unix epoch.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, PartialOrd)]
 pub struct MyDateTime(pub DateTime<Utc>);
 
 impl From<i64> for MyDateTime {
