@@ -24,8 +24,8 @@ fn db_task_add_new_success() {
         // note: sqlite first id is 1, not 0
         assert_eq!(result0.id, 1);
         // generated timestamp is within 1 second of now
-        assert!(result0.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
-        assert!(result0.last_edit_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result0.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result0.last_edit_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
         assert!(result0.done_time.is_none());
 
         let mut task_data1 = sample_task_data()[1].clone();
@@ -33,8 +33,8 @@ fn db_task_add_new_success() {
         let result1 = db.add_new_task(&task_data1)
             .expect("Adding task should not fail");
         assert_eq!(result1.id, 2);
-        assert!(result1.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
-        assert!(result1.last_edit_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result1.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result1.last_edit_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
         assert!(result1.done_time.is_none());
 
         assert_eq!(db.all_tasks().unwrap(), vec![
@@ -100,7 +100,7 @@ fn db_modify_task_success() {
         
         let mut task_data0 = sample_task_data()[0].clone();
         task_data0.tag = Some(tag_result0.id);
-        let result0 = db.add_new_task(&task_data0).unwrap();
+        let mut result0 = db.add_new_task(&task_data0).unwrap();
 
         let mut task_data1 = sample_task_data()[1].clone();
         task_data1.tag = Some(tag_result1.id);
@@ -109,7 +109,8 @@ fn db_modify_task_success() {
 
         let modify_result = db.modify_task(result0.id, &task_data1)
             .expect("Modify task should not fail");
-        assert!(modify_result.last_edit_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(modify_result.last_edit_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        result0.last_edit_time = modify_result.last_edit_time;
 
         assert_eq!(db.all_tasks().unwrap(),
             vec![
@@ -126,9 +127,10 @@ fn db_modify_task_success_remove_tag() {
         let tag_result0 = db.add_new_tag(&sample_tag_data()[0]).unwrap();
         let mut new_modify = sample_task_data()[0].clone();
         new_modify.tag = Some(tag_result0.id);
-        let result0 = db.add_new_task(&new_modify).unwrap();
+        let mut result0 = db.add_new_task(&new_modify).unwrap();
         new_modify.tag = None;
-        db.modify_task(result0.id, &new_modify).unwrap();
+        let generated = db.modify_task(result0.id, &new_modify).unwrap();
+        result0.last_edit_time = generated.last_edit_time;
 
         assert_eq!(db.task_by_id(result0.id).unwrap().unwrap(),
                    Task::from_parts(&new_modify, &result0)
@@ -143,9 +145,10 @@ fn db_modify_task_success_add_tag() {
 
         let mut new_modify = sample_task_data()[0].clone();
         new_modify.tag = None;
-        let result0 = db.add_new_task(&new_modify).unwrap();
+        let mut result0 = db.add_new_task(&new_modify).unwrap();
         new_modify.tag = Some(tag_id_0);
-        db.modify_task(result0.id, &new_modify).unwrap();
+        let generated = db.modify_task(result0.id, &new_modify).unwrap();
+        result0.last_edit_time = generated.last_edit_time;
 
         assert_eq!(db.task_by_id(result0.id).unwrap().unwrap(),
                    Task::from_parts(&new_modify, &result0)
@@ -161,9 +164,10 @@ fn db_modify_task_success_replace_tag() {
 
         let mut new_modify = sample_task_data()[0].clone();
         new_modify.tag = Some(tag_id_0);
-        let result0 = db.add_new_task(&new_modify).unwrap();
+        let mut result0 = db.add_new_task(&new_modify).unwrap();
         new_modify.tag = Some(tag_id_1);
-        db.modify_task(result0.id, &new_modify).unwrap();
+        let generated = db.modify_task(result0.id, &new_modify).unwrap();
+        result0.last_edit_time = generated.last_edit_time;
 
         assert_eq!(db.task_by_id(result0.id).unwrap().unwrap(),
                    Task::from_parts(&new_modify, &result0)
@@ -178,9 +182,10 @@ fn db_modify_task_success_keep_tag() {
 
         let mut new_modify = sample_task_data()[0].clone();
         new_modify.tag = Some(tag_id_0);
-        let result0 = db.add_new_task(&new_modify).unwrap();
+        let mut result0 = db.add_new_task(&new_modify).unwrap();
         new_modify.title = new_modify.title + " more!";
-        db.modify_task(result0.id, &new_modify).unwrap();
+        let generated = db.modify_task(result0.id, &new_modify).unwrap();
+        result0.last_edit_time = generated.last_edit_time;
 
         assert_eq!(db.task_by_id(result0.id).unwrap().unwrap(),
                    Task::from_parts(&new_modify, &result0)
@@ -276,7 +281,7 @@ fn db_task_finish_success() {
 
         let finish_data = db.finish_task(result0.id).expect("finish task should not fail");
         let finish_time = finish_data.done_time.as_ref().expect("Finish data should be some,");
-        assert!(finish_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(finish_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
         let mut new_task = Task::from_parts(&task_data0, &result0);
         new_task.done_time = finish_data.done_time;

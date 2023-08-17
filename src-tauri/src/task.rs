@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use crate::my_date_time::MyDateTime;
 use crate::TagId;
+use chrono::{DateTime, Utc, serde::ts_seconds, serde::ts_seconds_option};
 
 pub type TaskId = i64;
 
@@ -12,11 +12,16 @@ pub struct Task {
     pub tag: Option<TagId>,
     pub body: String,
     pub difficulty: i32,
-    pub create_time: MyDateTime,
-    pub last_edit_time: MyDateTime,
-    pub due_time: Option<MyDateTime>,
-    pub target_time: Option<MyDateTime>,
-    pub done_time: Option<MyDateTime>,
+    #[serde(with = "ts_seconds")]
+    pub create_time: DateTime<Utc>,
+    #[serde(with = "ts_seconds")]
+    pub last_edit_time: DateTime<Utc>,
+    #[serde(with = "ts_seconds_option")]
+    pub due_time: Option<DateTime<Utc>>,
+    #[serde(with = "ts_seconds_option")]
+    pub target_time: Option<DateTime<Utc>>,
+    #[serde(with = "ts_seconds_option")]
+    pub done_time: Option<DateTime<Utc>>,
     pub paused: bool,
 }
 
@@ -28,8 +33,8 @@ impl Task {
             tag: editable.tag,
             body: editable.body.clone(),
             difficulty: editable.difficulty,
-            create_time: MyDateTime::from(generated.create_time.clone()),
-            last_edit_time: MyDateTime::from(generated.last_edit_time.clone()),
+            create_time: generated.create_time.clone(),
+            last_edit_time: generated.last_edit_time.clone(),
             due_time: editable.due_time.as_ref().map(|time| time.clone()),
             target_time: editable.target_time.as_ref().map(|time| time.clone()),
             done_time: generated.done_time.as_ref().map(|time| time.clone()),
@@ -48,8 +53,10 @@ pub struct EditableTaskData {
     pub tag: Option<TagId>,
     pub body: String,
     pub difficulty: i32,
-    pub due_time: Option<MyDateTime>,
-    pub target_time: Option<MyDateTime>,
+    #[serde(with = "ts_seconds_option")]
+    pub due_time: Option<DateTime<Utc>>,
+    #[serde(with = "ts_seconds_option")]
+    pub target_time: Option<DateTime<Utc>>,
     pub paused: bool,
 }
 
@@ -57,19 +64,24 @@ pub struct EditableTaskData {
 /// Fields of a `Task` determined by the database when a new task is created.
 pub struct GeneratedTaskData {
     pub id: TaskId,
-    pub create_time: MyDateTime,
-    pub last_edit_time: MyDateTime,
-    pub done_time: Option<MyDateTime>,
+    #[serde(with = "ts_seconds")]
+    pub create_time: DateTime<Utc>,
+    #[serde(with = "ts_seconds")]
+    pub last_edit_time: DateTime<Utc>,
+    #[serde(with = "ts_seconds_option")]
+    pub done_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 /// Fields of a `Task` determined by the database when an existing task is modified.
 pub struct ModifiedTaskData {
-    pub last_edit_time: MyDateTime,
+    #[serde(with = "ts_seconds")]
+    pub last_edit_time: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 /// Fields of a `Task` determined by the database when an existing task is marked (or unmarked) as done.
 pub struct FinishedTaskData {
-    pub done_time: Option<MyDateTime>,
+    #[serde(with = "ts_seconds_option")]
+    pub done_time: Option<DateTime<Utc>>,
 }

@@ -20,12 +20,12 @@ fn db_tag_add_new() {
         // note: sqlite first id is 1, not 0
         assert_eq!(result0.id, 1);
         // generated timestamp is within 1 second of now
-        assert!(result0.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result0.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
         let result1 = db.add_new_tag(&sample_tag_data()[1])
             .expect("Adding tag should not fail");
         assert_eq!(result1.id, 2);
-        assert!(result1.create_time.0.timestamp().abs_diff(Utc::now().timestamp()) < 2);
+        assert!(result1.create_time.timestamp().abs_diff(Utc::now().timestamp()) < 2);
 
         assert_eq!(db.all_tags().unwrap(), vec![
             Tag::from_parts(&sample_tag_data()[0], &result0),

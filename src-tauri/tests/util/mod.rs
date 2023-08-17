@@ -63,12 +63,8 @@ static SAMPLE_TASKS: Lazy<Vec<EditableTaskData>> = Lazy::new(|| vec![
         tag: Some(1),
         body: String::from("A type of berry"),
         difficulty: 3,
-        due_time: Some(MyDateTime::from(
-            Utc.with_ymd_and_hms(2023, 9, 1, 0,0,0).unwrap()
-        )),
-        target_time: Some(MyDateTime::from(
-            Utc.with_ymd_and_hms(2023, 8, 1, 0,0,0).unwrap()
-        )),
+        due_time: Some(Utc.with_ymd_and_hms(2023, 9, 1, 0,0,0).unwrap()),
+        target_time: Some(Utc.with_ymd_and_hms(2023, 8, 1, 0,0,0).unwrap()),
         paused: false,
     },
     EditableTaskData {

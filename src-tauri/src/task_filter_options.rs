@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use crate::{MyDateTime, TagId, Task, TaskId};
 use crate::filters::{*};
 
@@ -9,11 +10,11 @@ pub struct TaskFilterOptions {
     pub tag_filter: Option<OptionalFilter<SetFilter<TagId>>>,
     pub body_filter: Option<ContainsStringFilter>,
     pub difficulty_filter: Option<SetFilter<i32>>,
-    pub create_time_filter: Option<OrderedRangeFilter<MyDateTime>>,
-    pub last_edit_time_filter: Option<OrderedRangeFilter<MyDateTime>>,
-    pub due_time_filter: Option<OptionalFilter<OrderedRangeFilter<MyDateTime>>>,
-    pub target_time_filter: Option<OptionalFilter<OrderedRangeFilter<MyDateTime>>>,
-    pub done_time_filter: Option<OptionalFilter<OrderedRangeFilter<MyDateTime>>>,
+    pub create_time_filter: Option<OrderedRangeFilter<DateTime<Utc>>>,
+    pub last_edit_time_filter: Option<OrderedRangeFilter<DateTime<Utc>>>,
+    pub due_time_filter: Option<OptionalFilter<OrderedRangeFilter<DateTime<Utc>>>>,
+    pub target_time_filter: Option<OptionalFilter<OrderedRangeFilter<DateTime<Utc>>>>,
+    pub done_time_filter: Option<OptionalFilter<OrderedRangeFilter<DateTime<Utc>>>>,
     pub paused_filter: Option<ExactlyFilter<bool>>,
 }
 

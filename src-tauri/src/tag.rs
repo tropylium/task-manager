@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc, serde::ts_seconds};
 use serde::{Deserialize, Serialize};
 use crate::hsl_color::HslColor;
 use crate::my_date_time::MyDateTime;
@@ -10,7 +11,8 @@ pub struct Tag {
     pub name: String,
     pub color: HslColor,
     pub active: bool,
-    pub create_time: MyDateTime,
+    #[serde(with = "ts_seconds")]
+    pub create_time: DateTime<Utc>,
 }
 
 impl Tag {
@@ -20,7 +22,7 @@ impl Tag {
             name: editable.name.clone(),
             color: editable.color.clone(),
             active: editable.active,
-            create_time: MyDateTime::from(generated.create_time.clone()),
+            create_time: generated.create_time.clone(),
         }
     }
 }
@@ -29,7 +31,8 @@ impl Tag {
 /// Fields of a `Tag` determined by the database when a new task is created.
 pub struct GeneratedTagData {
     pub id: TagId,
-    pub create_time: MyDateTime,
+    #[serde(with = "ts_seconds")]
+    pub create_time: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

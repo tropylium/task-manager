@@ -44,7 +44,7 @@ impl Db {
                 "name" TEXT NOT NULL,
                 "color" INTEGER NOT NULL,
                 "active" INTEGER NOT NULL,
-                "create_time" INTEGER NOT NULL
+                "create_time" STRING NOT NULL
             );
         "#, Db::TAG_TABLE), ()).unwrap();
         connection.execute(&format!(r#"
@@ -53,11 +53,11 @@ impl Db {
                 "title" TEXT NOT NULL,
                 "body" TEXT NOT NULL,
                 "difficulty" INTEGER NOT NULL,
-                "create_time" INTEGER NOT NULL,
-                "last_edit_time" INTEGER NOT NULL,
-                "due_time" INTEGER,
-                "target_time" INTEGER,
-                "done_time" INTEGER,
+                "create_time" STRING NOT NULL,
+                "last_edit_time" STRING NOT NULL,
+                "due_time" STRING,
+                "target_time" STRING,
+                "done_time" STRING,
                 "paused" INTEGER
             );
         "#, Db::TASK_TABLE), ()).unwrap();
@@ -105,7 +105,7 @@ impl Db {
     ///
     /// Returns the fields generated for this tag.
     pub fn add_new_tag(&mut self, data: &EditableTagData) -> DbResult<GeneratedTagData> {
-        let now = MyDateTime::from(Utc::now());
+        let now = Utc::now();
         let tx = self.conn.transaction()?;
         tx.execute(&format!(
             "INSERT INTO {} (name, color, active, create_time) values (?1, ?2, ?3, ?4);", Db::TAG_TABLE
@@ -214,7 +214,7 @@ impl Db {
             }
         }
 
-        let now = MyDateTime::from(Utc::now());
+        let now = Utc::now();
         let tx = self.conn.transaction()?;
         tx.execute(&format!(r#"
             INSERT INTO {}
@@ -230,7 +230,7 @@ impl Db {
         tx.commit()?;
         Ok(GeneratedTaskData {
             id: new_id,
-            create_time: MyDateTime::from(now.0.clone()),
+            create_time: now.clone(),
             last_edit_time: now,
             done_time: None,
         })
@@ -262,7 +262,7 @@ impl Db {
             }
         }
 
-        let now = MyDateTime::from(Utc::now());
+        let now = Utc::now();
         let tx = self.conn.transaction()?;
         let rows = tx.execute(&format!(r#"
                 UPDATE {} SET
@@ -335,7 +335,7 @@ impl Db {
         if task.done_time.is_some() {
             return Err(DbError::TaskStatusError { id, actual_status: true });
         }
-        let done_time = Some(MyDateTime::from(Utc::now()));
+        let done_time = Some(Utc::now());
         let tx = self.conn.transaction()?;
         tx.execute(&format!(
             "UPDATE {} SET done_time = ?2 WHERE id = ?1;", Db::TASK_TABLE
