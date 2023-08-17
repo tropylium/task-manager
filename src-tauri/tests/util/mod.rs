@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::fs;
 use chrono::{TimeZone, Utc};
 use once_cell::sync::Lazy;
-use app::{Db, EditableTagData, EditableTaskData, HslColor, MyDateTime};
+use app::{Db, EditableTagData, EditableTaskData, HslColor};
 
 pub const TEST_PATH: &str = "test-outputs/test-db.sqlite";
 // We want to run each test synchronously because they modify the same file,

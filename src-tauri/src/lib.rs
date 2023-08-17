@@ -9,6 +9,6 @@ mod task_filter_options;
 pub use tag::{*};
 pub use task::{*};
 pub use db::{*};
-pub use my_date_time::{*};
 pub use hsl_color::{*};
 pub use filters::{*};
+pub use task_filter_options::{*};

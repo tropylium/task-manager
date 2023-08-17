@@ -5,6 +5,7 @@ use crate::my_date_time::MyDateTime;
 
 pub type TagId = i64;
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Represents a tag in this application.
 pub struct Tag {
     pub id: TagId,
@@ -28,6 +29,7 @@ impl Tag {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Fields of a `Tag` determined by the database when a new task is created.
 pub struct GeneratedTagData {
     pub id: TagId,
@@ -36,6 +38,7 @@ pub struct GeneratedTagData {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Fields of a `Tag` modifiable by the client.
 pub struct EditableTagData {
     pub name: String,

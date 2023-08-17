@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc, serde::ts_seconds, serde::ts_seconds_option};
 pub type TaskId = i64;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Represents a task in this application.
 pub struct Task {
     pub id: TaskId,
@@ -47,6 +48,7 @@ impl Task {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Fields of a `Task` modifiable by the client.
 pub struct EditableTaskData {
     pub title: String,
@@ -61,6 +63,7 @@ pub struct EditableTaskData {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Fields of a `Task` determined by the database when a new task is created.
 pub struct GeneratedTaskData {
     pub id: TaskId,
@@ -73,6 +76,7 @@ pub struct GeneratedTaskData {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Fields of a `Task` determined by the database when an existing task is modified.
 pub struct ModifiedTaskData {
     #[serde(with = "ts_seconds")]
@@ -80,6 +84,7 @@ pub struct ModifiedTaskData {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
 /// Fields of a `Task` determined by the database when an existing task is marked (or unmarked) as done.
 pub struct FinishedTaskData {
     #[serde(with = "ts_seconds_option")]

@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 use std::hash::Hash;
+use serde::{Serialize, Deserialize};
 
 /// Generic filter on a type.
 pub trait ApplyFilter<T> {
     fn passes(&self, value: &T) -> bool;
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ExactlyFilter<T: PartialEq> {
     pub value: T,
 }
@@ -15,6 +17,7 @@ impl<T: PartialEq> ApplyFilter<T> for ExactlyFilter<T> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ContainsStringFilter {
     pub pattern: String
 }
@@ -24,6 +27,7 @@ impl ApplyFilter<String> for ContainsStringFilter {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum OptionalFilter<T> {
     AcceptsSome(T),
     AcceptsNone,
@@ -39,7 +43,9 @@ impl<T, F: ApplyFilter<T>> ApplyFilter<Option<T>> for OptionalFilter<F> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct SetFilter<T> {
+    #[serde(bound(deserialize = "T: 'de + Eq + Hash + Deserialize<'de>"))]
     pub set: HashSet<T>,
 }
 impl<T: Eq + Hash> ApplyFilter<T> for SetFilter<T> {
@@ -48,6 +54,7 @@ impl<T: Eq + Hash> ApplyFilter<T> for SetFilter<T> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct OrderedRangeFilter<T> {
     pub lower_bound: Option<T>,
     pub upper_bound: Option<T>,

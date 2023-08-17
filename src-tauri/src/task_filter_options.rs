@@ -1,9 +1,12 @@
 use chrono::{DateTime, Utc};
-use crate::{MyDateTime, TagId, Task, TaskId};
+use serde::{Deserialize, Serialize};
+use crate::{TagId, Task, TaskId};
 use crate::filters::{*};
 
 /// Represents the possible filters from a user, for every field of a `Task` supported
 /// by this application.
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskFilterOptions {
     pub id_filter: Option<ExactlyFilter<TaskId>>,
     pub title_filter: Option<ContainsStringFilter>,
