@@ -17,7 +17,7 @@ impl DbExecutor {
     fn run_db_test(&self, f: impl FnOnce(Db) + panic::UnwindSafe) {
         // delete any database files if exists
         _ = fs::remove_file(TEST_PATH);
-        let db = Db::new(TEST_PATH).unwrap();
+        let db = Db::connect(TEST_PATH).unwrap();
         f(db);
         // cleanup
         _ = fs::remove_file(TEST_PATH);

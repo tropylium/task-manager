@@ -36,7 +36,7 @@ fn filter_serialization() {
     let sample_filter = TaskFilterOptions {
         id_filter: Some(ExactlyFilter { value: 0 }),
         title_filter: Some(ContainsStringFilter { pattern: String::from("hello") } ),
-        tag_filter: Some(OptionalFilter::AcceptsSome(SetFilter { set: HashSet::from([1,2,3])})),
+        tag_filter: Some(OptionalFilter::OnlySome(SetFilter { set: HashSet::from([1,2,3])})),
         body_filter: None, // same as title filter
         difficulty_filter: None, // similar to tag filter
         create_time_filter: Some(OrderedRangeFilter {
@@ -44,7 +44,7 @@ fn filter_serialization() {
             upper_bound: Some(Utc.with_ymd_and_hms(2023, 10, 1, 15,30,0).unwrap()),
         }),
         last_edit_time_filter: None, // same to create time filter
-        due_time_filter: Some(OptionalFilter::AcceptsNone),
+        due_time_filter: Some(OptionalFilter::OnlyNone),
         target_time_filter: None, // covered by above
         done_time_filter: None, // covered by above
         paused_filter: Some(ExactlyFilter { value: true }),

@@ -2,7 +2,6 @@ use std::path::{Path};
 use chrono::Utc;
 use rusqlite::{Connection, Row};
 use crate::{EditableTaskData, Tag, EditableTagData, GeneratedTagData, TagId, Task, TaskId, GeneratedTaskData, FinishedTaskData, ModifiedTaskData};
-use crate::my_date_time::MyDateTime;
 
 #[derive(Debug, PartialEq)]
 /// Errors that can occur during operation of the database.
@@ -36,7 +35,7 @@ impl Db {
     const TAG_TASK_TABLE: &'static str = "tags_tasks";
 
     /// Creates a database instance from either an empty/ nonexistent file or an existing database.
-    pub fn new<P: AsRef<Path>>(database_file: P) -> DbResult<Self> {
+    pub fn connect<P: AsRef<Path>>(database_file: P) -> DbResult<Self> {
         let connection = Connection::open(database_file)?;
         connection.execute(&format!(r#"
             create table if not exists {} (

@@ -29,16 +29,16 @@ impl ApplyFilter<String> for ContainsStringFilter {
 
 #[derive(Serialize, Deserialize)]
 pub enum OptionalFilter<T> {
-    AcceptsSome(T),
-    AcceptsNone,
+    OnlySome(T),
+    OnlyNone,
 }
 impl<T, F: ApplyFilter<T>> ApplyFilter<Option<T>> for OptionalFilter<F> {
     fn passes(&self, value: &Option<T>) -> bool {
         match self {
-            OptionalFilter::AcceptsSome(filter) => {
+            OptionalFilter::OnlySome(filter) => {
                 value.as_ref().is_some_and(|value| filter.passes(&value))
             }
-            OptionalFilter::AcceptsNone => value.is_none()
+            OptionalFilter::OnlyNone => value.is_none()
         }
     }
 }
